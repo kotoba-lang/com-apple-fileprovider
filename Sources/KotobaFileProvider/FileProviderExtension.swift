@@ -14,6 +14,13 @@ public final class ProviderItem: NSObject, NSFileProviderItem {
         value.directory ? .folder : (UTType(filenameExtension: (value.name as NSString).pathExtension) ?? .data)
     }
     public var documentSize: NSNumber? { value.directory ? nil : NSNumber(value: value.size) }
+    public var contentPolicy: NSFileProviderContentPolicy {
+        switch value.residency {
+        case .onlineOnly: .downloadLazily
+        case .automatic: .inherited
+        case .pinned: .downloadEagerlyAndKeepDownloaded
+        }
+    }
     public var capabilities: NSFileProviderItemCapabilities {
         value.directory ? [.allowsReading, .allowsContentEnumerating, .allowsRenaming,
                            .allowsReparenting, .allowsDeleting, .allowsAddingSubItems]

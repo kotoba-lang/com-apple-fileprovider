@@ -1,6 +1,9 @@
 import Foundation
 import Testing
 @testable import KotobaFileProvider
+#if canImport(FileProvider)
+import FileProvider
+#endif
 
 @Test func wireShapeRoundTrips() throws {
     let item = DriveItem(id: .init(rawValue: "item-1"),
@@ -18,3 +21,18 @@ import Testing
     let localhost = URL(string: "http://127.0.0.1:1338/")!
     _ = HTTPDriveBridge(baseURL: localhost, bearer: "ephemeral")
 }
+
+#if canImport(FileProvider)
+@Test func residencyMapsToFinderContentPolicy() {
+    func item(_ residency: Residency) -> ProviderItem {
+        ProviderItem(DriveItem(id: .init(rawValue: "item"),
+                               parentID: .init(rawValue: "root"), name: "file",
+                               directory: false, size: 0,
+                               contentVersion: "c", metadataVersion: "m",
+                               schedule: .continuous, residency: residency))
+    }
+    #expect(item(.onlineOnly).contentPolicy == .downloadLazily)
+    #expect(item(.automatic).contentPolicy == .inherited)
+    #expect(item(.pinned).contentPolicy == .downloadEagerlyAndKeepDownloaded)
+}
+#endif
