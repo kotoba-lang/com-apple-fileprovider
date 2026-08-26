@@ -1,53 +1,66 @@
 # com-apple-fileprovider
 
-**Design only, and the only one of the four that cannot be written in
-Clojure at all.** That is the finding; the rest of this file is what it
-would take.
+**Cloud Itonami Drive in Finder, with policy outside Swift.**
 
-Apple's File Provider framework is what Google Drive, Dropbox and iCloud
-Drive use today. It is the only way to get the behaviour people mean when
-they say "it shows up like Google Drive":
-
-- an entry in the Finder sidebar that survives reboot,
-- **online-only placeholder files** that materialise on open,
-- per-file sync badges and progress,
-- eviction of local copies under disk pressure.
-
-`org-ietf-nfs` gives a mounted volume. It does not give any of the four.
-
-## What is in the way
-
-A File Provider is a **macOS app extension**: Swift or Objective-C,
-subclassing `NSFileProviderReplicatedExtension`, bundled inside a signed
-host application, with the `com.apple.developer.fileprovider.*` entitlement.
-There is no protocol to speak and no port to bind — the OS loads your code.
-
-That collides head-on with this workspace's rule against writing new native
-implementations (ADR-2607072000, and the runtime priority in CLAUDE.md).
-**Adopting it needs an explicit exception ADR first**, naming the scope, the
-review boundary and the removal condition. The signing infrastructure itself
-already exists (see the `secrets-location-map` skill, mobile-publishing).
-
-## The shape it would take
+This repository contains the narrow native adapter required by Apple's File
+Provider framework and a portable Clojure policy model. macOS owns placeholders,
+materialisation and Finder integration; Cloud Itonami owns storage, encryption,
+sharing, conflict handling and synchronization decisions.
 
 ```
-com-apple-fileprovider
-  Swift extension           NSFileProviderReplicatedExtension — the only native part
-    ↕ XPC / local HTTP
-  cloud-itonami-app         enumeration, materialisation, upload
-    nfs.v3/IFilesystem      the same injected filesystem every other surface uses
+Finder / File Provider
+  KotobaDriveFileProvider.appex       Swift callback adapter
+    HTTP on 127.0.0.1 + ephemeral bearer
+      cloud-itonami-app               encrypted Drive API
+        kotoba-lang/envelope          client-side AEAD and key envelopes
 ```
 
-The native part stays a **transport shim with no decisions in it** — the
-same line `nfs.tcp` draws, and the same one ADR-2607241100 draws for
-decision-free C. Enumeration, conflict handling and materialisation policy
-belong on the Clojure side where they can be tested.
+The Swift boundary does not contain sync or eviction policy. Those rules live in
+`fileprovider.model` (`.cljc`) and use two independent controls:
 
-## The condition for starting
+- schedule: `continuous`, `manual`, or `paused`;
+- residency: `online-only`, `automatic`, or `pinned` (always available offline).
 
-Someone wants online-only files and a permanent sidebar entry badly enough
-to accept a signed native extension. Until then, a mounted NFS volume is
-the honest answer to "can it look like a disk".
+An item with a pending local edit, an unverified remote copy, or pinned residency
+cannot be evicted. File Provider and Cloud Itonami consume the same commands and
+badge vocabulary from that model.
+
+## Contents
+
+- `Sources/KotobaFileProvider`: typed localhost bridge and an
+  `NSFileProviderReplicatedExtension` implementation.
+- `Host` and `Extension`: minimal host app, extension entrypoint, Info.plists and
+  entitlements.
+- `project.yml`: reproducible Xcode project input; generated `.xcodeproj` is not
+  committed.
+- `src/fileprovider/model.cljc`: portable schedule/residency state machine.
+
+The bridge accepts only `localhost` or `127.0.0.1`. Its bearer is injected into
+the shared app group by the host process; it is never compiled into the app.
+
+## Verify
+
+```sh
+clojure -M:test
+swift test
+xcodegen generate
+xcodebuild -project KotobaFileProvider.xcodeproj -scheme KotobaDrive \
+  -configuration Debug -derivedDataPath DerivedData \
+  CODE_SIGNING_ALLOWED=NO build
+```
+
+The unsigned build verifies the complete host + embedded extension structure.
+Finder activation additionally requires signing with an Apple team whose
+profile grants the File Provider and app-group entitlements. The host registers
+the `Cloud Itonami Drive` domain with `NSFileProviderManager` when launched.
+
+## Native boundary
+
+Apple loads a File Provider as a signed app extension; there is no portable
+protocol substitute for that entrypoint. Swift here is therefore a platform
+shim only. The crypto and policy libraries are owned under `kotoba-lang` and are
+runtime-portable; removing Finder integration removes this Swift target without
+changing Drive semantics.
 
 ## License
 

@@ -1,0 +1,4 @@
+.build/
+.cpcache/
+KotobaFileProvider.xcodeproj/
+DerivedData/
