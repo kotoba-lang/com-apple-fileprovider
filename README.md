@@ -49,6 +49,10 @@ xcodebuild -project KotobaFileProvider.xcodeproj -scheme KotobaDrive \
   CODE_SIGNING_ALLOWED=NO build
 ```
 
+`docs/operator-quickstart.md` walks these four commands in order, with the
+output each one produced and the two places where a green result does not mean
+what it looks like.
+
 The unsigned build verifies the complete host + embedded extension structure.
 Finder activation additionally requires signing with an Apple team whose
 profile grants the File Provider and app-group entitlements. The host registers
