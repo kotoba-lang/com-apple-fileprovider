@@ -41,7 +41,7 @@ the shared app group by the host process; it is never compiled into the app.
 ## Verify
 
 ```sh
-clojure -M:test
+nbb --classpath src:test test/run_tests.cljs   # or: clojure -M:test
 swift test
 xcodegen generate
 xcodebuild -project KotobaFileProvider.xcodeproj -scheme KotobaDrive \
@@ -49,9 +49,12 @@ xcodebuild -project KotobaFileProvider.xcodeproj -scheme KotobaDrive \
   CODE_SIGNING_ALLOWED=NO build
 ```
 
-`docs/operator-quickstart.md` walks these four commands in order, with the
-output each one produced and the two places where a green result does not mean
-what it looks like.
+`docs/operator-quickstart.md` walks these commands in order, with the output
+each one produced and the two places where a green result does not mean what it
+looks like. The policy suite's own discrimination is kept honest from outside
+this repository: eleven regressions of `model.cljc` are registered in the
+superproject's `scripts/maturity-loop/mutations.edn`, which applies each one and
+fails if the suite stays green.
 
 The unsigned build verifies the complete host + embedded extension structure.
 Finder activation additionally requires signing with an Apple team whose
