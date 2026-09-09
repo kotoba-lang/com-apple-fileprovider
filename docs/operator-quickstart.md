@@ -17,12 +17,13 @@ here.
 
 | | |
 |---|---|
-| commit | `25b10f4` (`main`, 4 commits) |
+| commit | steps 2–7 `25b10f4`; step 1 re-walked at `3d6e710` (2026-09-09) |
 | macOS | 26.3.1, arm64 |
 | Xcode | 26.6 (17F113) |
 | Swift | 6.3.3 (`swiftlang-6.3.3.1.3`) |
 | XcodeGen | 2.45.4 |
 | Clojure CLI | 1.12.5.1654 |
+| nbb | 1.5.212 |
 
 Re-measure rather than trust this table; it is a record of one walk, not a
 supported matrix. `xcodegen` is the only non-Apple prerequisite
@@ -37,7 +38,7 @@ supported matrix. `xcodegen` is the only non-Apple prerequisite
   ── eviction safety                ── localhost HTTP + bearer
   ── badge vocabulary               ── NSFileProviderReplicatedExtension
       ↓ step 1                          ↓ steps 2–3
-  clojure -M:test                   swift test, then xcodebuild
+  nbb / clojure -M:test             swift test, then xcodebuild
 ```
 
 A policy change breaks step 1 and leaves 2–3 green. A wire-shape change does the
@@ -46,7 +47,21 @@ not its encoding — the two halves only meet at the schedule/residency vocabula
 
 Neither step proves Finder mounts it. That is a third property; §4.
 
-## 1. Policy — `clojure -M:test`
+## 1. Policy — `clojure -M:test`, or `nbb test/run_tests.cljs`
+
+The policy half is portable `.cljc` and has two runners. They load the same
+namespace and must agree; they are listed in the order this workspace reaches
+for them.
+
+```
+$ nbb --classpath src:test test/run_tests.cljs
+
+Testing fileprovider.model-test
+
+Ran 12 tests containing 101 assertions.
+0 failures, 0 errors.
+fileprovider model: OK
+```
 
 ```
 $ clojure -M:test
@@ -54,39 +69,60 @@ Running tests in #{"test"}
 
 Testing fileprovider.model-test
 
-Ran 4 tests containing 20 assertions.
+Ran 12 tests containing 101 assertions.
 0 failures, 0 errors.
 ```
 
-Four seconds with `.cpcache` removed, two warm, on the machine above — the very
-first run on a new machine is slower because it also clones the test-runner git
-dependency into `~/.gitlibs`.
+Under a second for `nbb`. Four seconds for `clojure -M:test` with `.cpcache`
+removed, two warm, on the machine above — the very first run on a new machine is
+slower because it also clones the test-runner git dependency into `~/.gitlibs`.
+`test/run_tests.cljs` is the `nbb` entry point only; the Clojure runner does not
+pick it up, which is why both report 12 and not 13.
 
-The four tests are the repository's invariants, not smoke: schedule and
-residency move independently, `:open` on a placeholder materialises, eviction
-never discards the only known-good copy, and every local state has a badge.
+The tests are the repository's invariants, not smoke. Four hold the happy path
+of each mode — schedule and residency move independently, `:open` on a
+placeholder materialises, eviction never discards the only known-good copy,
+every local state has a badge. The other eight hold the half that decides when
+an operation is **refused**: that `:materialized` is the one state whose bytes
+may be discarded, that a completed upload clears the pending flag, that pausing
+outranks pinning, that unpin frees what pin was holding, that each validity
+field is checked on its own, and that an event the model does not know moves
+nothing.
 
 **Confirm it discriminates before you trust a green.** Relax the eviction guard
 in `src/fileprovider/model.cljc` — change `can-evict?`'s `(not= :pinned
-residency)` to `true` — and the suite names the invariant you broke:
+residency)` to `true` — and the suite names the invariants you broke:
 
 ```
+FAIL in (pin-and-unpin-move-only-what-must-move) (model_test.cljc:155)
+unpinning frees bytes it was only holding because they were pinned
+expected: (false? (model/can-evict? pinned))
+  actual: (not (false? true))
+
 FAIL in (eviction-is-lossless) (model_test.cljc:36)
 dirty, unverified and pinned bytes are never evicted
 expected: (false? (model/can-evict? item))
   actual: (not (false? true))
 ...
-Ran 4 tests containing 20 assertions.
-2 failures, 0 errors.
+Ran 12 tests containing 101 assertions.
+3 failures, 0 errors.
 ```
 
-Exit status is `1`. Revert with `git checkout -- src/fileprovider/model.cljc`.
+Exit status is `1` from both runners. Revert with
+`git checkout -- src/fileprovider/model.cljc`.
+
+That one edit is the cheapest check, not the whole one. Eleven separate
+regressions of this model are registered as mutations in the superproject's
+`scripts/maturity-loop/mutations.edn`, which applies each to a throwaway
+worktree and fails if the suite stays green. Ten of the eleven were measured
+surviving the four-test suite this file described before 2026-09-09; the floor
+below is what that costs to keep.
 
 The exit status catches a *failing* test and not a *missing* one. Empty
 `test/fileprovider/model_test.cljc` down to its `ns` form and the runner reports
 `Ran 0 tests containing 0 assertions. 0 failures, 0 errors.` and exits `0`. A
 check built on this step therefore needs a floor on the count as well as the
-exit status — today, 4 tests and 20 assertions. §2 has the same shape for the
+exit status — today, 12 tests and 101 assertions. §2 has the same shape for the
 Swift side, and the reason to state it twice is that the two runners disagree
 about almost everything else.
 
