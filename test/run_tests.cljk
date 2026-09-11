@@ -1,4 +1,4 @@
-#!/usr/bin/env nbb
+#!/usr/bin/env kbb
 ;; run_tests.cljs — the nbb entry point for this repo's portable model tests.
 ;;
 ;; `deps.edn` already exposes the same namespace to the Clojure test runner.

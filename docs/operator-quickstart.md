@@ -38,7 +38,7 @@ supported matrix. `xcodegen` is the only non-Apple prerequisite
   ── eviction safety                ── localhost HTTP + bearer
   ── badge vocabulary               ── NSFileProviderReplicatedExtension
       ↓ step 1                          ↓ steps 2–3
-  nbb / clojure -M:test             swift test, then xcodebuild
+  nbb / kbb -M:test             swift test, then xcodebuild
 ```
 
 A policy change breaks step 1 and leaves 2–3 green. A wire-shape change does the
@@ -47,14 +47,14 @@ not its encoding — the two halves only meet at the schedule/residency vocabula
 
 Neither step proves Finder mounts it. That is a third property; §4.
 
-## 1. Policy — `clojure -M:test`, or `nbb test/run_tests.cljk`
+## 1. Policy — `kbb -M:test`, or `kbb --backend sci test/run_tests.cljk`
 
 The policy half is portable `.cljc` and has two runners. They load the same
 namespace and must agree; they are listed in the order this workspace reaches
 for them.
 
 ```
-$ nbb --classpath src:test test/run_tests.cljk
+$ kbb --backend sci --classpath src:test test/run_tests.cljk
 
 Testing fileprovider.model-test
 
@@ -64,7 +64,7 @@ fileprovider model: OK
 ```
 
 ```
-$ clojure -M:test
+$ kbb -M:test
 Running tests in #{"test"}
 
 Testing fileprovider.model-test
@@ -73,7 +73,7 @@ Ran 12 tests containing 101 assertions.
 0 failures, 0 errors.
 ```
 
-Under a second for `nbb`. Four seconds for `clojure -M:test` with `.cpcache`
+Under a second for `nbb`. Four seconds for `kbb -M:test` with `.cpcache`
 removed, two warm, on the machine above — the very first run on a new machine is
 slower because it also clones the test-runner git dependency into `~/.gitlibs`.
 `test/run_tests.cljk` is the `nbb` entry point only; the Clojure runner does not
