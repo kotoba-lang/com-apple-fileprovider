@@ -33,7 +33,7 @@ badge vocabulary from that model.
   entitlements.
 - `project.yml`: reproducible Xcode project input; generated `.xcodeproj` is not
   committed.
-- `src/fileprovider/model.cljc`: portable schedule/residency state machine.
+- `src/fileprovider/model.cljk`: portable schedule/residency state machine.
 
 The bridge accepts only `localhost` or `127.0.0.1`. Its bearer is injected into
 the shared app group by the host process; it is never compiled into the app.
@@ -41,7 +41,7 @@ the shared app group by the host process; it is never compiled into the app.
 ## Verify
 
 ```sh
-nbb --classpath src:test test/run_tests.cljs   # or: clojure -M:test
+nbb --classpath src:test test/run_tests.cljk   # or: clojure -M:test
 swift test
 xcodegen generate
 xcodebuild -project KotobaFileProvider.xcodeproj -scheme KotobaDrive \

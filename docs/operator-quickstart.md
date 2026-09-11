@@ -33,7 +33,7 @@ supported matrix. `xcodegen` is the only non-Apple prerequisite
 
 ```
   policy                            transport
-  src/fileprovider/model.cljc       Sources/KotobaFileProvider/
+  src/fileprovider/model.cljk       Sources/KotobaFileProvider/
   ── schedule / residency           ── DriveItem wire shape
   ── eviction safety                ── localhost HTTP + bearer
   ── badge vocabulary               ── NSFileProviderReplicatedExtension
@@ -47,14 +47,14 @@ not its encoding — the two halves only meet at the schedule/residency vocabula
 
 Neither step proves Finder mounts it. That is a third property; §4.
 
-## 1. Policy — `clojure -M:test`, or `nbb test/run_tests.cljs`
+## 1. Policy — `clojure -M:test`, or `nbb test/run_tests.cljk`
 
 The policy half is portable `.cljc` and has two runners. They load the same
 namespace and must agree; they are listed in the order this workspace reaches
 for them.
 
 ```
-$ nbb --classpath src:test test/run_tests.cljs
+$ nbb --classpath src:test test/run_tests.cljk
 
 Testing fileprovider.model-test
 
@@ -76,7 +76,7 @@ Ran 12 tests containing 101 assertions.
 Under a second for `nbb`. Four seconds for `clojure -M:test` with `.cpcache`
 removed, two warm, on the machine above — the very first run on a new machine is
 slower because it also clones the test-runner git dependency into `~/.gitlibs`.
-`test/run_tests.cljs` is the `nbb` entry point only; the Clojure runner does not
+`test/run_tests.cljk` is the `nbb` entry point only; the Clojure runner does not
 pick it up, which is why both report 12 and not 13.
 
 The tests are the repository's invariants, not smoke. Four hold the happy path
@@ -90,7 +90,7 @@ field is checked on its own, and that an event the model does not know moves
 nothing.
 
 **Confirm it discriminates before you trust a green.** Relax the eviction guard
-in `src/fileprovider/model.cljc` — change `can-evict?`'s `(not= :pinned
+in `src/fileprovider/model.cljk` — change `can-evict?`'s `(not= :pinned
 residency)` to `true` — and the suite names the invariants you broke:
 
 ```
@@ -109,7 +109,7 @@ Ran 12 tests containing 101 assertions.
 ```
 
 Exit status is `1` from both runners. Revert with
-`git checkout -- src/fileprovider/model.cljc`.
+`git checkout -- src/fileprovider/model.cljk`.
 
 That one edit is the cheapest check, not the whole one. Eleven separate
 regressions of this model are registered as mutations in the superproject's
@@ -119,7 +119,7 @@ surviving the four-test suite this file described before 2026-09-09; the floor
 below is what that costs to keep.
 
 The exit status catches a *failing* test and not a *missing* one. Empty
-`test/fileprovider/model_test.cljc` down to its `ns` form and the runner reports
+`test/fileprovider/model_test.cljk` down to its `ns` form and the runner reports
 `Ran 0 tests containing 0 assertions. 0 failures, 0 errors.` and exits `0`. A
 check built on this step therefore needs a floor on the count as well as the
 exit status — today, 12 tests and 101 assertions. §2 has the same shape for the
