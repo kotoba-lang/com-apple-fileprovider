@@ -41,7 +41,7 @@ the shared app group by the host process; it is never compiled into the app.
 ## Verify
 
 ```sh
-nbb --classpath src:test test/run_tests.cljk   # or: clojure -M:test
+kbb --backend sci --classpath src:test test/run_tests.cljk   # or: kbb -M:test
 swift test
 xcodegen generate
 xcodebuild -project KotobaFileProvider.xcodeproj -scheme KotobaDrive \
